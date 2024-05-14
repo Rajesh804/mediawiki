@@ -1,7 +1,6 @@
 replicaCount: 1
-
 image:
-  repository: https://012345678901.dkr.ecr.us-east-1.amazonaws.com
+  repository: 644496061305.dkr.ecr.us-west-2.amazonaws.com/develop/mediawiki
   tag: "latest"
 
 service:
