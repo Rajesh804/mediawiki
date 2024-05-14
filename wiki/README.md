@@ -9,9 +9,12 @@ Configuration in this directory builds and deploys a MediaWiki in Kubernetes Clu
 
 ## Installing the Chart
 
-To install the chart with the release name `my-release`:
+To install the chart with the release name `mediawiki`:
 
 ```console
-helm repo add bitnami https://charts.bitnami.com/bitnami
-helm upgrade --install mysql --namespace mysql --create-namespace -f mysql-values.yaml
+helm upgrade --install mediawiki \
+    --set-string image.tag=latest \
+    --namespace dev --create-namespace \
+    -f ./charts/mediawiki/dev-values.yaml \
+    ./charts/mediawiki
 ```

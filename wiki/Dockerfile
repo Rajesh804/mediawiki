@@ -1,4 +1,4 @@
-FROM php:7.4-apache
+FROM --platform=linux/amd64 php:7.4-apache
 
 ENV WIKI_VERSION_MAJOR_MINOR=1.41
 ENV WIKI_VERSION_BUGFIX=1
@@ -41,6 +41,6 @@ RUN docker-php-ext-install -j "$(nproc)" \
 
 WORKDIR /var/www/html
 
-RUN curl -L https://releases.wikimedia.org/mediawiki/$WIKI_VERSION_MAJOR_MINOR/mediawiki-$WIKI_VERSION.tar.gz | tar xz --strip=1 
+RUN curl -L https://releases.wikimedia.org/mediawiki/$WIKI_VERSION_MAJOR_MINOR/mediawiki-$WIKI_VERSION.tar.gz | tar xz --strip=1
 
 EXPOSE 80
