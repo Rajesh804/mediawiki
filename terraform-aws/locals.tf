@@ -5,11 +5,9 @@ locals{
   vpc_cidr      =  "10.220.0.0/16"
   azs = slice(data.aws_availability_zones.available.names, 0, 3)
   env          = "dev"
-  tier         = "Demo Infra"
-  infra        = "dev"
 
   # EKS Variables
   eks_cluster_name = "demo-eks01"
-  eks_cluster_version= "1.28"
+  eks_cluster_version= "1.29"
 
 }

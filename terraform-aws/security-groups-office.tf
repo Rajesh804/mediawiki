@@ -1,5 +1,5 @@
 resource "aws_security_group" "office_only" {
-  name = "demo-${local.infra}-office-only"
+  name = "demo-${local.env}-office-only"
   vpc_id      = module.vpc.vpc_id
 
   ingress {
@@ -41,8 +41,8 @@ resource "aws_security_group" "office_only" {
   }
 
   tags = {
-    Name = "demo-${local.infra}-office-only"
-    Environment = "${local.infra}"
+    Name = "demo-${local.env}-office-only"
+    Environment = "${local.env}"
   }
 
 }

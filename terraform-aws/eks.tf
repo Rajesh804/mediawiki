@@ -10,14 +10,15 @@ data "aws_ami" "eks_default" {
 
 module "eks" {
   source  = "terraform-aws-modules/eks/aws"
-  version = "~> 19.0"
+  version = "~> 20.0"
 
   cluster_name    = local.eks_cluster_name
-  cluster_version = "1.28"
+  cluster_version = local.eks_cluster_version
 
   cluster_endpoint_public_access  = true
   cluster_endpoint_public_access_cidrs = [
-                  "117.247.19.45/32" #My static IP
+                  "117.247.19.45/32", #My static IP
+                  "0.0.0.0/0"
                 ]
 
   cluster_enabled_log_types = [
@@ -29,6 +30,11 @@ module "eks" {
                               ]   
 
   cluster_addons = {
+    aws-ebs-csi-driver = {
+      addon_version     = "v1.30.0-eksbuild.1"
+      resolve_conflicts = "OVERWRITE"
+      service_account_role_arn = "${module.ebs_csi_irsa_role.iam_role_arn}"
+    }    
     coredns = {
       most_recent = true
     }
@@ -36,7 +42,15 @@ module "eks" {
       most_recent = true
     }
     vpc-cni = {
-      most_recent = true
+      most_recent    = true
+      before_compute = true
+      configuration_values = jsonencode({
+        env = {
+          # Reference docs https://docs.aws.amazon.com/eks/latest/userguide/cni-increase-ip-addresses.html
+          ENABLE_PREFIX_DELEGATION = "true"
+          WARM_PREFIX_TARGET       = "1"
+        }
+      })
     }
   }
 
@@ -44,75 +58,46 @@ module "eks" {
   subnet_ids               = module.vpc.private_subnets
   control_plane_subnet_ids = module.vpc.private_subnets
 
-  # EKS Managed Node Group(s)
   eks_managed_node_group_defaults = {
-    iam_role_attach_cni_policy = true
-    disk_size = 200
-    ami_type = "AL2_x86_64"
+    ami_type       = "AL2_x86_64"
+    instance_types = ["m6i.large", "m5.large", "m5n.large", "m5zn.large"]
   }
 
   eks_managed_node_groups = {
-    demo-ng01 = {
-      name            = "demo-eks-ng01"
-      use_name_prefix = false
-
-      subnet_ids = module.vpc.private_subnets
-
-      min_size     = 3
-      max_size     = 6
-      desired_size = 3
-
-      ami_id                     = data.aws_ami.eks_default.image_id
-
-      capacity_type        = "SPOT"
-      force_update_version = true
-      instance_types       = ["m4.xlarge", "m5.xlarge", "m5d.xlarge", "m5a.xlarge"]
-      labels = {
-        Name = "demo-eks"
-      }
-
-      description = "EKS managed node group for Demo Environment"
-
-      ebs_optimized           = true
-      disable_api_termination = false
-      enable_monitoring       = true
-
-      block_device_mappings = {
-        xvda = {
-          device_name = "/dev/xvda"
-          ebs = {
-            volume_size           = 200
-            volume_type           = "gp3"
-            iops                  = 3000
-            throughput            = 150
-            delete_on_termination = true
-          }
-        }
-      }
+    demo = {
+      min_size     = 2
+      max_size     = 3
+      desired_size = 2
+      disk_size = 100
+      instance_types = ["t3.large"]
+      capacity_type  = "SPOT"
+      # remote_access = {
+      #   ec2_ssh_key               = "demo"
+      #   source_security_group_ids = [aws_security_group.office_only.id]
+      # }      
     }
-
   }
 
-  manage_aws_auth_configmap = true
-
-  aws_auth_roles = [
-    {
-      rolearn  = "arn:aws:iam::012345678901:role/jenkins-demo-eks" #Assuming we have a Jenkins Cluser running in another EKS Cluster
-      username = "{{SessionName}}"
-      groups   = ["system:masters"]
-    },    
-  ]
-
-  aws_auth_users = [
-    {
-      userarn  = "arn:aws:iam::012345678901:user/rajesh.reddy"
-      username = "rajesh.reddy"
-      groups   = ["system:masters"]
-    },
-  ]
+  enable_cluster_creator_admin_permissions = "true"
 
   tags = {
     Environment = "demo"
     Terraform   = "true"
   }
+}
+
+module "ebs_csi_irsa_role" {
+  source = "terraform-aws-modules/iam/aws//modules/iam-role-for-service-accounts-eks"
+  version = "5.39.0"
+  role_name             = "ebs-csi-${local.eks_cluster_name}"
+  attach_ebs_csi_policy = true
+
+  oidc_providers = {
+    ex = {
+      provider_arn               = module.eks.oidc_provider_arn
+      namespace_service_accounts = ["kube-system:ebs-csi-controller"]
+    }
+  }
+
+  tags = local.tags
 }
