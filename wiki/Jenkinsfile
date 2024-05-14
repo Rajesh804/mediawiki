@@ -1,0 +1,66 @@
+pipeline {
+
+    agent any
+
+    environment {
+        AWS_ACCOUNT_ID      = '012345678901'
+        AWS_REGION          = 'us-eat-1'
+        EKS_CLUSTER_NAME    = 'demo-eks01'
+    }    
+
+    triggers {
+    pollSCM('H/2 * * * *')
+    }
+
+    options {
+    buildDiscarder(logRotator(numToKeepStr: '20'))
+    skipStagesAfterUnstable()
+    durabilityHint('PERFORMANCE_OPTIMIZED')
+    disableConcurrentBuilds()
+    skipDefaultCheckout(true)
+    overrideIndexTriggers(false)
+    }
+
+    stages {
+        stage ('Checkout Code'){
+        steps {
+            checkout scm
+            script {
+            env.commit_id = sh(script: "git rev-parse --short HEAD", returnStdout: true).trim()
+            sh(script: "aws ecr get-login --no-include-email --registry-ids ${AWS_ACCOUNT_ID} --region ${AWS_REGION} | sh", returnStdout: true).trim()
+            }
+        }
+        }
+
+        stage('Build Docker') {
+        steps {
+            script {
+                docker.build('mediawiki', '--network host --pull .')
+                docker.withRegistry('https://012345678901.dkr.ecr.us-east-1.amazonaws.com') {
+                docker.image('mediawiki').push(commit_id)
+                }
+            }
+        }
+        }
+
+        stage('Deploy MediaWiki - Dev') {
+        when {
+            beforeAgent true
+            branch "master"
+        }
+        steps {
+            sh 'aws eks --region ${AWS_REGION} update-kubeconfig --name ${EKS_CLUSTER_NAME}'
+            sh '''
+            helm upgrade --install mediawiki \
+            --set-string image.tag=${commit_id} \
+            --namespace dev --create-namespace \
+            -f ./charts/mediawiki/dev-values.yaml \
+            --timeout 600s \
+            --wait \
+            --atomic \
+            ./charts/mediawiki  || exit 1
+            '''
+        }
+        }
+    }
+}

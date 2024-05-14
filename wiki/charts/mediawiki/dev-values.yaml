@@ -1,0 +1,17 @@
+replicaCount: 1
+
+image:
+  repository: https://012345678901.dkr.ecr.us-east-1.amazonaws.com
+  tag: "latest"
+
+service:
+  type: LoadBalancer
+  port: 80
+
+resources:
+  limits:
+    cpu: 1000m
+    memory: 2048Mi
+  requests:
+    cpu: 1000m
+    memory: 2048Mi

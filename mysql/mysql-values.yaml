@@ -1,0 +1,6 @@
+auth:
+  rootPassword: "root@123"
+  createDatabase: true
+  database: "mediawiki"
+  username: "mediawiki"
+  password: "mediawiki@123"
