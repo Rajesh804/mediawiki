@@ -13,5 +13,5 @@ To install the chart with the release name `mysql`:
 
 ```console
 helm repo add bitnami https://charts.bitnami.com/bitnami
-helm upgrade --install mysql --namespace mysql --create-namespace -f mysql-values.yaml
+helm upgrade --install mysql --namespace mysql --create-namespace oci://registry-1.docker.io/bitnamicharts/mysql -f mysql-values.yaml
 ```
