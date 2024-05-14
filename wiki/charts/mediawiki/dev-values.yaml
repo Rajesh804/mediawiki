@@ -1,10 +1,10 @@
 replicaCount: 1
 image:
-  repository: 644496061305.dkr.ecr.us-west-2.amazonaws.com/develop/mediawiki
+  repository: 012345678901.dkr.ecr.us-west-2.amazonaws.com/develop/mediawiki
   tag: "latest"
 
 service:
-  type: LoadBalancer
+  type: ClusterIP
   port: 80
 
 resources:
